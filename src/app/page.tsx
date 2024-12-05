@@ -253,8 +253,8 @@ const PSOPage = () => {
           <p className="text-gray-700 text-lg leading-relaxed">
             <strong>Iteração Atual:</strong> {iteration}
             <br />
-            <strong>Melhor Pontuação:</strong>{" "}
-            {globalBest ? globalBest.score.toFixed(2) : "Calculando..."}
+            {/* <strong>Melhor Pontuação:</strong>{" "}
+            {globalBest ? globalBest.score.toFixed(2) : "Calculando..."} */}
           </p>
         </div>
       </Card>
