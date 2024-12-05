@@ -1,168 +1,289 @@
 "use client";
 
-import React, { useState } from "react";
-import PSOCanvas from "./components/PSOCanvas";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useEffect, useRef } from "react";
 
-export default function HomePage() {
-  const [numParticles, setNumParticles] = useState(30);
-  const [inertiaWeight, setInertiaWeight] = useState(0.5);
-  const [cognitiveWeight, setCognitiveWeight] = useState(2);
-  const [socialWeight, setSocialWeight] = useState(2);
-  const [maxVelocity, setMaxVelocity] = useState(2);
-  const [maxPosition, setMaxPosition] = useState(150);
-  const [reset, setReset] = useState(false);
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 500;
+const MAX_ITERATIONS = 50;
 
-  const handleReset = () => {
-    setReset((prev) => !prev);
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Particle {
+  position: Point;
+  velocity: Point;
+  bestPosition: Point;
+  bestScore: number;
+  color: string;
+}
+
+const generateRandomPoint = (): Point => ({
+  x: Math.random() * CANVAS_WIDTH,
+  y: Math.random() * CANVAS_HEIGHT,
+});
+
+const calculateFitness = (position: Point, cities: Point[]): number => {
+  let totalDistance = 0;
+  cities.forEach((city) => {
+    totalDistance += Math.hypot(city.x - position.x, city.y - position.y);
+  });
+  return totalDistance / cities.length;
+};
+
+const PSOPage = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [mapImage, setMapImage] = useState<HTMLImageElement | null>(null);
+  const [cities, setCities] = useState<Point[]>([
+    { x: 200, y: 100 },
+    { x: 400, y: 150 },
+    { x: 300, y: 300 },
+    { x: 500, y: 400 },
+  ]);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [globalBest, setGlobalBest] = useState<{
+    position: Point;
+    score: number;
+  } | null>(null);
+  const [iteration, setIteration] = useState(0);
+  const [draggingCityIndex, setDraggingCityIndex] = useState<number | null>(
+    null
+  );
+  const [showTrail, setShowTrail] = useState(true);
+
+  const numParticles = 300;
+  const speed = 0.07;
+
+  useEffect(() => {
+    const img = new Image();
+    img.src =
+      "https://maps.googleapis.com/maps/api/staticmap?center=Ipatinga,MG,Brazil&zoom=11&size=800x500&key=AIzaSyBQJAfpSgvsAl33fx5AOVvFOluEXUZ2nLc";
+    img.onload = () => setMapImage(img);
+
+    resetParticles();
+  }, []);
+
+  const resetParticles = () => {
+    const initialParticles = Array.from({ length: numParticles }, () => {
+      const position = generateRandomPoint();
+      const fitness = calculateFitness(position, cities);
+      return {
+        position,
+        velocity: { x: Math.random() - 0.5, y: Math.random() - 0.5 },
+        bestPosition: position,
+        bestScore: fitness,
+        color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+      };
+    });
+
+    const bestParticle = initialParticles.reduce(
+      (best, particle) =>
+        particle.bestScore < best.score
+          ? { position: particle.position, score: particle.bestScore }
+          : best,
+      { position: { x: 0, y: 0 }, score: Infinity }
+    );
+
+    setParticles(initialParticles);
+    setGlobalBest(bestParticle);
+    setIteration(0);
+  };
+
+  const updateParticles = () => {
+    const inertia = 0.5;
+    const cognitive = 2;
+    const social = 2;
+
+    setParticles((prevParticles) =>
+      prevParticles.map((particle) => {
+        const { position, velocity, bestPosition, bestScore } = particle;
+
+        const score = calculateFitness(position, cities);
+
+        let updatedBestPosition = bestPosition;
+        let updatedBestScore = bestScore;
+        if (score < bestScore) {
+          updatedBestPosition = position;
+          updatedBestScore = score;
+        }
+
+        if (!globalBest || score < globalBest.score) {
+          setGlobalBest({ position, score });
+        }
+
+        const newVelocity = {
+          x:
+            inertia * velocity.x +
+            cognitive * Math.random() * (updatedBestPosition.x - position.x) +
+            social *
+              Math.random() *
+              (globalBest ? globalBest.position.x - position.x : 0),
+          y:
+            inertia * velocity.y +
+            cognitive * Math.random() * (updatedBestPosition.y - position.y) +
+            social *
+              Math.random() *
+              (globalBest ? globalBest.position.y - position.y : 0),
+        };
+
+        const newPosition = {
+          x: Math.max(
+            0,
+            Math.min(CANVAS_WIDTH, position.x + newVelocity.x * speed)
+          ),
+          y: Math.max(
+            0,
+            Math.min(CANVAS_HEIGHT, position.y + newVelocity.y * speed)
+          ),
+        };
+
+        return {
+          position: newPosition,
+          velocity: newVelocity,
+          bestPosition: updatedBestPosition,
+          bestScore: updatedBestScore,
+          color: particle.color,
+        };
+      })
+    );
+  };
+
+  useEffect(() => {
+    if (iteration >= MAX_ITERATIONS) return;
+
+    const interval = setInterval(() => {
+      updateParticles();
+      setIteration((prev) => prev + 1);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [iteration, particles]);
+
+  const drawCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !mapImage) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.drawImage(mapImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    cities.forEach((city) => {
+      ctx.fillStyle = "blue";
+      ctx.beginPath();
+      ctx.arc(city.x, city.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    particles.forEach((particle) => {
+      ctx.fillStyle = particle.color;
+      ctx.beginPath();
+      ctx.arc(particle.position.x, particle.position.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (showTrail) {
+        ctx.strokeStyle = particle.color;
+        ctx.beginPath();
+        ctx.moveTo(particle.bestPosition.x, particle.bestPosition.y);
+        ctx.lineTo(particle.position.x, particle.position.y);
+        ctx.stroke();
+      }
+    });
+
+    if (iteration >= MAX_ITERATIONS && globalBest) {
+      ctx.fillStyle = "green";
+      ctx.beginPath();
+      ctx.arc(globalBest.position.x, globalBest.position.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+
+  useEffect(() => {
+    drawCanvas();
+  }, [particles, cities, mapImage, iteration]);
+
+  const handleMouseDown = (event: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    const cityIndex = cities.findIndex(
+      (city) => Math.hypot(city.x - mouseX, city.y - mouseY) < 10
+    );
+
+    if (cityIndex !== -1) {
+      setDraggingCityIndex(cityIndex);
+    }
+  };
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (draggingCityIndex === null) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    setCities((prevCities) =>
+      prevCities.map((city, index) =>
+        index === draggingCityIndex ? { x: mouseX, y: mouseY } : city
+      )
+    );
+  };
+
+  const handleMouseUp = () => {
+    setDraggingCityIndex(null);
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen flex flex-col items-center p-6">
-      <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-5xl gap-8">
-        {/* Configurações */}
-        <Card className="w-full max-w-md shadow-lg p-4 rounded-lg">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">
-              Configurações do Algoritmo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="numParticles" className="text-lg">
-                  Quantidade de Partículas
-                </Label>
-                <Input
-                  type="number"
-                  id="numParticles"
-                  value={numParticles}
-                  onChange={(e) => setNumParticles(Number(e.target.value))}
-                  min="1"
-                  max="100"
-                  className="mt-2 p-2 text-lg"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Controla o número de partículas na simulação.
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="inertiaWeight" className="text-lg">
-                  Peso de Inércia
-                </Label>
-                <Input
-                  type="number"
-                  id="inertiaWeight"
-                  value={inertiaWeight}
-                  onChange={(e) => setInertiaWeight(Number(e.target.value))}
-                  step="0.1"
-                  min="0"
-                  max="1"
-                  className="mt-2 p-2 text-lg"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Define o quanto as partículas continuam na mesma direção.
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="cognitiveWeight" className="text-lg">
-                  Peso Cognitivo
-                </Label>
-                <Input
-                  type="number"
-                  id="cognitiveWeight"
-                  value={cognitiveWeight}
-                  onChange={(e) => setCognitiveWeight(Number(e.target.value))}
-                  step="0.1"
-                  min="0"
-                  max="3"
-                  className="mt-2 p-2 text-lg"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Controla o quanto as partículas confiam em suas próprias
-                  descobertas.
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="socialWeight" className="text-lg">
-                  Peso Social
-                </Label>
-                <Input
-                  type="number"
-                  id="socialWeight"
-                  value={socialWeight}
-                  onChange={(e) => setSocialWeight(Number(e.target.value))}
-                  step="0.1"
-                  min="0"
-                  max="3"
-                  className="mt-2 p-2 text-lg"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Controla o quanto as partículas confiam no grupo.
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="maxVelocity" className="text-lg">
-                  Velocidade Máxima
-                </Label>
-                <Input
-                  type="number"
-                  id="maxVelocity"
-                  value={maxVelocity}
-                  onChange={(e) => setMaxVelocity(Number(e.target.value))}
-                  step="0.1"
-                  min="1"
-                  max="10"
-                  className="mt-2 p-2 text-lg"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Limita a velocidade das partículas.
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="maxPosition" className="text-lg">
-                  Área de Dispersão
-                </Label>
-                <Input
-                  type="number"
-                  id="maxPosition"
-                  value={maxPosition}
-                  onChange={(e) => setMaxPosition(Number(e.target.value))}
-                  step="10"
-                  min="50"
-                  max="500"
-                  className="mt-2 p-2 text-lg"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Define o espaço inicial onde as partículas se espalham.
-                </p>
-              </div>
-              <Button
-                onClick={handleReset}
-                className="w-full py-3 text-xl font-semibold bg-blue-500 hover:bg-blue-600 mt-4"
-              >
-                Resetar Simulação
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Canvas */}
-        <div className="flex-1 w-full max-w-lg mt-6 md:mt-0">
-          <PSOCanvas
-            numParticles={numParticles}
-            inertiaWeight={inertiaWeight}
-            cognitiveWeight={cognitiveWeight}
-            socialWeight={socialWeight}
-            maxVelocity={maxVelocity}
-            maxPosition={maxPosition}
-            reset={reset}
-          />
+    <div className="flex flex-col items-center gap-6 p-6 bg-gray-50 min-h-screen">
+      <Card className="max-w-2xl w-full shadow-lg border border-gray-200">
+        <div className="p-6">
+          <h1 className="text-3xl font-semibold text-center text-gray-800 mb-4">
+            PSO - Melhor Local para um Posto de Gasolina
+          </h1>
+          <p className="text-gray-700 text-lg leading-relaxed">
+            <strong>Iteração Atual:</strong> {iteration}
+            <br />
+            <strong>Melhor Pontuação:</strong>{" "}
+            {globalBest ? globalBest.score.toFixed(2) : "Calculando..."}
+          </p>
         </div>
+      </Card>
+
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          className="border rounded-lg shadow-lg cursor-pointer bg-white"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        />
       </div>
+
+      <div className="flex items-center gap-4">
+        <Checkbox
+          checked={showTrail}
+          onCheckedChange={() => setShowTrail((prev) => !prev)}
+        />
+        <label className="text-gray-700">Exibir Rastro das Partículas</label>
+      </div>
+
+      <Button className="mt-4" onClick={resetParticles}>
+        Reiniciar Simulação
+      </Button>
     </div>
   );
-}
+};
+
+export default PSOPage;
