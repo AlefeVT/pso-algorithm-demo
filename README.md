@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Particle Swarm Optimization (PSO) Demo
 
-## Getting Started
+Este repositório apresenta uma demonstração do algoritmo de otimização por enxame de partículas (PSO), implementado com o framework **Next.js 15**. O projeto foi desenvolvido para uma apresentação acadêmica, ilustrando como o PSO resolve problemas de otimização de maneira eficiente e visual.
 
-First, run the development server:
+## Tecnologias Utilizadas
+- **Next.js 15**: Framework React para renderização do frontend.
+- **TypeScript**: Para tipagem estática e maior confiabilidade do código.
+- **Tailwind CSS**: Para estilização responsiva e moderna.
+- **Node.js**: Ambiente de execução para a camada backend (se utilizada).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Funcionalidades
+- **Visualização Interativa**: O projeto inclui uma representação visual da busca do enxame por soluções ótimas no espaço de solução.
+- **Parâmetros Configuráveis**: Possibilidade de ajustar fatores como tamanho do enxame, coeficientes de aprendizado e função de fitness.
+- **Atualização em Tempo Real**: Demonstração dinâmica do comportamento das partículas.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Como Executar
+### Requisitos
+- Node.js (v18 ou superior).
+- Gerenciador de pacotes npm ou yarn.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Passos
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/AlefeVT/pso-algorithm-demo.git
+   ```
+2. Navegue até a pasta do projeto:
+   ```bash
+   cd pso-algorithm-demo
+   ```
+3. Instale as dependências:
+   ```bash
+   npm install
+   ```
+4. Inicie o servidor de desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+5. Acesse a aplicação em [http://localhost:3000](http://localhost:3000).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Contribuição
+Se você deseja contribuir com o projeto:
+1. Fork o repositório.
+2. Crie uma branch com sua feature/ajuste: `git checkout -b minha-feature`.
+3. Commit suas alterações: `git commit -m 'Minha nova feature'`.
+4. Envie suas alterações: `git push origin minha-feature`.
+5. Abra um Pull Request.
 
-## Learn More
+## Licença
+Este projeto é licenciado sob a [Licença MIT](LICENSE).
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Desenvolvido com dedicação para fins educacionais. Se você encontrar algum problema ou tiver sugestões, fique à vontade para abrir uma issue.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
